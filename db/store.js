@@ -1,6 +1,6 @@
 const util = require('util');
 const fs = require('fs');
-const { v4 } = require('uuid');
+const { v4: generateId } = require('uuid');
 
 const readFileAsync = util.promisify(fs.readFile);
 const writeFileAsync = util.promisify(fs.writeFile);
@@ -23,6 +23,20 @@ class Store {
       .catch(function (err) {
         console.log(err);
         return [];
+      });
+  }
+  postNote(note) {
+    note.id = generateId();
+    this.getNotes()
+      .then(function (notes) {
+        notes.push(note);
+        return notes;
+      })
+      .then(function (updatedNotes) {
+        this.write(updatedNotes);
+      })
+      .then(function () {
+        return note;
       });
   }
 }
