@@ -1,43 +1,35 @@
 const util = require('util');
 const fs = require('fs');
 const { v4: generateId } = require('uuid');
-
 const readFileAsync = util.promisify(fs.readFile);
 const writeFileAsync = util.promisify(fs.writeFile);
 
 class Store {
-  //functions here
-
   read() {
-    return readFileAsync('db/db.json', 'utf-8');
+    return readFileAsync('db/db.json', 'utf-8').catch(() => '[]');
   }
 
-  write(note) {
-    return fs.writeFile('db/db.json', JSON.stringify(note));
+  write(notes) {
+    return writeFileAsync('db/db.json', JSON.stringify(notes));
   }
-  getNotes() {
-    this.read()
-      .then(function (notes) {
-        return JSON.parse(notes);
-      })
-      .catch(function (err) {
-        console.log(err);
-        return [];
-      });
+
+  async getNotes() {
+    const notes = await this.read();
+    return JSON.parse(notes);
   }
-  postNote(note) {
-    note.id = generateId();
-    this.getNotes()
-      .then(function (notes) {
-        notes.push(note);
-        return notes;
-      })
-      .then(function (updatedNotes) {
-        this.write(updatedNotes);
-      })
-      .then(function () {
-        return note;
-      });
+
+  async postNote(note) {
+    const notes = await this.getNotes();
+    const newNote = { ...note, id: generateId() };
+    notes.push(newNote);
+    await this.write(notes);
+    return newNote;
+  }
+
+  async deleteNote(id) {
+    const notes = await this.getNotes();
+    const filteredNotes = notes.filter((note) => note.id !== id);
+    await this.write(filteredNotes);
   }
 }
 

@@ -1,28 +1,56 @@
 const router = require('express').Router();
-const { getNotes, postNote } = require('../db/store');
+const store = require('../db/store');
 
 router.get('/notes', (req, res) => {
-  getNotes()
-    .then(function (notes) {
-      return res.json(notes);
+  store
+    .getNotes()
+    .then((notes) => {
+      res.json(notes);
     })
-    .catch(function (err) {
+    .catch((err) => {
       res.status(500).json(err);
     });
 });
 
 router.post('/notes', (req, res) => {
-  if (!req.body.title || !req.body.text)
-    return res.status(400).json({ error: 'malformed body' });
-  postNote(req.body)
-    .then(function (note) {
-      return res.json(note);
+  const { title, text } = req.body;
+  if (!title || !text) {
+    return res.status(400).json({ error: 'Title and text are required.' });
+  }
+  store
+    .postNote({
+      title,
+      text,
     })
-    .catch(function (err) {
+    .then((note) => {
+      res.json(note);
+    })
+    .catch((err) => {
       res.status(500).json(err);
     });
 });
 
-router.delete('/notes/:id', (req, res) => {});
+router.delete('/notes/:id', (req, res) => {
+  const { id } = req.params;
+  store
+    .getNotes()
+    .then((notes) => {
+      const filteredNotes = notes.filter((note) => note.id !== id);
+      if (filteredNotes.length === notes.length) {
+        return res.status(404).json({ error: 'Note not found.' });
+      }
+      store
+        .write(filteredNotes)
+        .then(() => {
+          res.json({ success: `Note ${id} deleted.` });
+        })
+        .catch((err) => {
+          res.status(500).json(err);
+        });
+    })
+    .catch((err) => {
+      res.status(500).json(err);
+    });
+});
 
 module.exports = router;
